@@ -86,7 +86,11 @@ def checkin_wjkc(base_url, email, password):
                      headers=headers, verify=False, timeout=15)
     d = dec(r.json()['data'])
     if d.get('code') != 0:
-        raise RuntimeError('签到失败：%s' % d.get('msg'))
+        msg = str(d.get('msg') or '')
+        # 今日已签到 / 重复签到 → 视为成功（浏览器手动点过也算）
+        if any(k in msg for k in ('SIGN_USE_MULTY_TIMES', 'HAS_SIGNED', 'ALREADY_SIGN', '已签到', '已经签到')):
+            return '今日已签到（%s）' % msg
+        raise RuntimeError('签到失败：%s' % msg)
     add = d.get('data', {}).get('addTraffic', 0)
     return '签到成功，获得 %s 流量' % fmt_traffic(add)
 
@@ -123,7 +127,7 @@ def collect_sites():
             'base_url': base_url,
             'email': email1,
             'password': password1,
-            'panel': os.environ.get('PANEL', 'sspanel'),
+            'panel': (os.environ.get('PANEL') or 'sspanel'),
         })
 
     index = 2
@@ -133,9 +137,9 @@ def collect_sites():
             break
         sites.append({
             'base_url': base_url_n,
-            'email': os.environ.get('EMAIL' + str(index)) or email1,
-            'password': os.environ.get('PASSWORD' + str(index)) or password1,
-            'panel': os.environ.get('PANEL' + str(index), 'sspanel'),
+            'email': (os.environ.get('EMAIL' + str(index)) or email1),
+            'password': (os.environ.get('PASSWORD' + str(index)) or password1),
+            'panel': (os.environ.get('PANEL' + str(index)) or 'sspanel'),
         })
         index += 1
 

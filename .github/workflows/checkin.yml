@@ -40,7 +40,6 @@ jobs:
           EMAIL: ${{ secrets.EMAIL }}
           PASSWORD: ${{ secrets.PASSWORD }}
           BASE_URL: ${{ secrets.BASE_URL }}
-          PANEL: ${{ secrets.PANEL }}
           EMAIL2: ${{ secrets.EMAIL2 }}
           PASSWORD2: ${{ secrets.PASSWORD2 }}
           BASE_URL2: ${{ secrets.BASE_URL2 }}
