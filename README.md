@@ -34,10 +34,14 @@ https://xcao.top/post-278.html 水个博文，操作更详细
 | ------------ | ------------ | ------------ | ------------ |
 | EMAIL  | 是  | 注册机场所用邮箱  | a@example.com  |
 | PASSWORD  | 是  | 注册机场所用密码  | password1  |
-| BASE_URL  | 是  | 机场地址  | https://examplea.com  |
+| BASE_URL  | 是  | 机场地址（不要带 /user 后缀）  | https://examplea.com  |
+| BASE_URL2 | 否  | 第二站机场地址，账号缺省时复用第一站  | https://exampleb.com  |
+| EMAIL2 / PASSWORD2 | 否  | 第二站账号，不填则复用 EMAIL / PASSWORD  |  |
 | SCKEY  | 否  | Sever酱秘钥  | SCTxxxxxxxxxxxxxx  |
 | TGBOT  | 否  | Telegram推送bot  | 5xxxxxxx:xxxxxxxxx  |
 | TGUSERID  | 否  | Telegram推送人id  | 8xxxxxxxxx  |
+
+> 多站支持：按 `BASE_URL2` → `BASE_URL3` → … 顺序自动循环签到所有已配置站点，每站签到结果分行输出。`BASE_URL` 为根地址，脚本会自动拼接 `/auth/login` 与 `/user/checkin`。
 
 3. 转到`Actions`创建一个workflow，运行一次，以后每天项目都会自动运行。最后，可以到Run sign查看签到情况，同时也会通过Sever酱发送出去。
 ## 参考
