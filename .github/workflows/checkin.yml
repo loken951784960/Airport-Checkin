@@ -2,7 +2,7 @@ name: "Airport Checkin"
 
 on:
   schedule:
-    - cron: "1 16 * * *"  # scheduled at 00:01 (UTC+8) everyday
+    - cron: "1 15 * * *"  # scheduled at 00:01 (UTC+8) everyday, GitHub cron +1h offset compensation
   workflow_dispatch:
 
 env:
