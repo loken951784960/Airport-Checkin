@@ -2,8 +2,21 @@ name: "Airport Checkin"
 
 on:
   schedule:
-    - cron: "17 16 * * *"  # scheduled at ~00:17 (UTC+8) everyday; avoid top-of-hour load to reduce GitHub cron delay
+    # GitHub 鍦ㄩ珮宄版椂娈电殑 schedule 浼氬欢杩熺敋鑷宠烦杩囷紝鍥犳璁剧疆澶氫釜鏃堕棿鐐癸紱
+    # 姣忎釜 run 寮€澶寸敱 guard step 妫€鏌ャ€?0 灏忔椂鍐呮槸鍚﹀凡鏈夋垚鍔熻繍琛屻€嶏紝淇濊瘉姣忓ぉ鍙湡姝ｆ墽琛屼竴娆?
+    - cron: "17 16 * * *"  # 鍖椾含 00:17锛堜富锛?
+    - cron: "17 18 * * *"  # 鍖椾含 02:17锛堝厹搴?1锛?
+    - cron: "17 20 * * *"  # 鍖椾含 04:17锛堝厹搴?2锛?
+    - cron: "47 22 * * *"  # 鍖椾含 06:47锛堝厹搴?3锛?
   workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: airport-checkin-daily
+  cancel-in-progress: false
 
 env:
   RUN_ENV: 'prod'
@@ -14,27 +27,65 @@ jobs:
     # if: github.ref == 'refs/heads/master'
 
     steps:
+      - name: Guard - 褰撳ぉ宸叉垚鍔熸墽琛岃繃鍒欒烦杩?
+        id: guard
+        if: github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          WF_FILE="${GITHUB_WORKFLOW_REF%%@*}"
+          WF_FILE="${WF_FILE##*/}"
+          echo "workflow file: $WF_FILE"
+          LAST=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow "$WF_FILE" \
+                 --status success --limit 1 --json createdAt --jq '.[0].createdAt // empty' 2>/dev/null || true)
+          echo "last success run: ${LAST:-<none>}"
+          if [ -n "$LAST" ]; then
+            LAST_EPOCH=$(date -u -d "$LAST" +%s 2>/dev/null || echo 0)
+            NOW_EPOCH=$(date -u +%s)
+            DIFF=$(( NOW_EPOCH - LAST_EPOCH ))
+            echo "seconds since last success: $DIFF"
+            if [ "$DIFF" -lt 36000 ]; then
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+              echo "10 灏忔椂鍐呭凡鏈夋垚鍔熻繍琛岋紝璺宠繃鏈"
+              exit 0
+            fi
+          fi
+          RUNNING=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow "$WF_FILE" \
+                    --status in_progress --limit 5 --json databaseId --jq 'length' 2>/dev/null || true)
+          echo "in_progress runs (incl. self): ${RUNNING:-0}"
+          if [ "${RUNNING:-0}" -ge 2 ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "宸叉湁鍙︿竴涓繍琛屽湪鎵ц涓紝璺宠繃鏈"
+            exit 0
+          fi
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+
       - name: Checkout master
+        if: steps.guard.outputs.skip != 'true'
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           # ref: master
 
       - name: Set up python
+        if: steps.guard.outputs.skip != 'true'
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
 
       - name: Random sleep
-        if: github.event_name == 'schedule'
+        if: github.event_name == 'schedule' && steps.guard.outputs.skip != 'true'
         run: sleep $(shuf -i 10-300 -n 1)
 
       - name: Install dependencies
+        if: steps.guard.outputs.skip != 'true'
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
       - name: Run sign
+        if: steps.guard.outputs.skip != 'true'
         env:
           SCKEY: ${{ secrets.SCKEY }}
           EMAIL: ${{ secrets.EMAIL }}
