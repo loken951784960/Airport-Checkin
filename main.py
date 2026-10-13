@@ -89,7 +89,8 @@ def checkin_wjkc(base_url, email, password):
         msg = str(d.get('msg') or '')
         # 今日已签到 / 重复签到 → 视为成功（浏览器手动点过也算）
         if any(k in msg for k in ('SIGN_USE_MULTY_TIMES', 'HAS_SIGNED', 'ALREADY_SIGN', '已签到', '已经签到')):
-            return '今日已签到（%s）' % msg
+            # 重复签到也算成功，不再把 SIGN_USE_MULTY_TIMES 这种原始代码甩给用户
+            return '✅ 今日已签到（本日已完成）'
         raise RuntimeError('签到失败：%s' % msg)
     add = d.get('data', {}).get('addTraffic', 0)
     return '签到成功，获得 %s 流量' % fmt_traffic(add)
